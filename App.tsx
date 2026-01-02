@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction, AppState } from './types';
 import Layout from './components/Layout';
@@ -7,6 +8,7 @@ import Simulator from './components/Simulator';
 import AiHub from './components/AiHub';
 import Tools from './components/Tools';
 import Auth from './components/Auth';
+import Landing from './components/Landing';
 import ProfileSettings from './components/ProfileSettings';
 
 const INITIAL_STATE: AppState = {
@@ -15,20 +17,25 @@ const INITIAL_STATE: AppState = {
   registeredUsers: [] 
 };
 
+const STORAGE_KEY = 'artha_app_data_v3';
+
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+  const [showLanding, setShowLanding] = useState(true);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   // Load from local storage on mount
   useEffect(() => {
-    const savedData = localStorage.getItem('artha_app_data_v2');
+    const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
-      setState(JSON.parse(savedData));
-    } else {
-        // Fallback for migration from old version if needed, or just clean state
-        localStorage.removeItem('artha_app_data'); 
+      const parsed = JSON.parse(savedData);
+      setState(parsed);
+      // If user is already logged in, we skip the landing page
+      if (parsed.user) {
+        setShowLanding(false);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -36,12 +43,13 @@ const App: React.FC = () => {
   // Save to local storage on change
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem('artha_app_data_v2', JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, isLoading]);
 
   const handleLogin = (user: UserProfile) => {
     setState(prev => ({ ...prev, user }));
+    setShowLanding(false);
   };
 
   const handleRegister = (newUser: UserProfile) => {
@@ -53,6 +61,7 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setState(prev => ({ ...prev, user: null }));
+    setShowLanding(true);
   };
 
   const handleUpdateProfile = (updatedUser: UserProfile) => {
@@ -66,7 +75,6 @@ const App: React.FC = () => {
   const addTransaction = (t: Omit<Transaction, 'id'>) => {
     const newT: Transaction = { ...t, id: crypto.randomUUID() };
     
-    // Update Karma Logic (Simple)
     let karmaChange = 0;
     if (t.type === 'INCOME') karmaChange = 2;
     if (t.type === 'EXPENSE' && t.category === 'Education') karmaChange = 1;
@@ -99,19 +107,29 @@ const App: React.FC = () => {
     }));
   };
 
-  if (isLoading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-gold-500">Loading Artha...</div>;
+  if (isLoading) return <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-gold-500 font-bold tracking-widest uppercase">
+    <div className="w-16 h-16 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+    Artha Initializing...
+  </div>;
 
-  // Authentication View
+  // 1. Show Landing First
+  if (showLanding && !state.user) {
+    return <Landing onEnter={() => setShowLanding(false)} />;
+  }
+
+  // 2. Authentication View (if not logged in)
   if (!state.user) {
     return (
         <Auth 
             onLogin={handleLogin} 
             onRegister={handleRegister} 
             registeredUsers={state.registeredUsers} 
+            onUpdateUser={handleUpdateProfile}
         />
     );
   }
 
+  // 3. Main Application
   return (
     <Layout 
       user={state.user} 

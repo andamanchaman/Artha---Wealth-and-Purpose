@@ -44,11 +44,11 @@ const Layout: React.FC<LayoutProps> = ({ user, children, activeTab, setActiveTab
     <div className="min-h-screen bg-transparent flex flex-col md:flex-row font-sans text-slate-100 overflow-hidden">
       
       {/* Mobile Header */}
-      <div className="md:hidden flex justify-between items-center p-4 bg-slate-900/40 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gold-400 to-emerald-400">
-          ARTHA
+      <div className="md:hidden flex justify-between items-center p-6 bg-slate-900/40 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+        <h1 className="text-2xl font-black tracking-tighter">
+           <span className="bg-clip-text text-transparent bg-gradient-to-r from-gold-400 via-white to-emerald-400">ARTHA</span>
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
            <button onClick={handleRestore} className="p-2 text-white/40 hover:text-white transition-colors">
               <RotateCcw size={20} />
            </button>
@@ -60,24 +60,24 @@ const Layout: React.FC<LayoutProps> = ({ user, children, activeTab, setActiveTab
 
       {/* Sidebar */}
       <aside className={`
-        fixed md:relative top-0 left-0 h-full w-64 
-        bg-slate-900/60 backdrop-blur-xl border-r border-white/10
+        fixed md:relative top-0 left-0 h-full w-72 
+        bg-slate-950/80 backdrop-blur-2xl border-r border-white/10
         transform transition-transform duration-300 z-40
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         flex flex-col
       `}>
-        <div className="p-6 hidden md:block">
+        <div className="p-8 hidden md:block">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-gold-400 to-emerald-400">
-                ARTHA
+              <h1 className="text-3xl font-black tracking-tighter">
+                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-gold-400 via-white to-emerald-400">ARTHA</span>
               </h1>
-              <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Wealth & Purpose</p>
+              <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.4em] mt-2">Private Wealth</p>
             </div>
             <button 
               onClick={handleRestore} 
               title="Restore Checkpoint"
-              className="p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+              className="p-1.5 text-slate-600 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               <RotateCcw size={16} />
             </button>
@@ -85,25 +85,25 @@ const Layout: React.FC<LayoutProps> = ({ user, children, activeTab, setActiveTab
         </div>
 
         {/* User Profile Summary */}
-        <div className="px-6 py-4 mb-4 border-b border-white/5 bg-white/5 mx-4 rounded-xl group relative">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-gold-500/20">
+        <div className="px-6 py-5 mb-6 border-b border-white/5 bg-white/5 mx-6 rounded-[2rem] group relative">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-500 to-emerald-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
-              <p className="font-medium truncate">{user.name}</p>
-              <p className="text-xs text-gold-400 truncate">{user.savingsLevel}</p>
+              <p className="font-bold truncate text-sm">{user.name}</p>
+              <p className="text-[10px] text-gold-400 uppercase font-bold tracking-widest truncate">{user.savingsLevel}</p>
             </div>
           </div>
           <button 
              onClick={onEditProfile}
-             className="absolute top-2 right-2 p-1 text-slate-500 hover:text-white opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900/80 rounded"
+             className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-white opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900/80 rounded-xl"
           >
-             <Edit3 size={12} />
+             <Edit3 size={14} />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-3">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -112,38 +112,32 @@ const Layout: React.FC<LayoutProps> = ({ user, children, activeTab, setActiveTab
                 setIsMobileMenuOpen(false);
               }}
               className={`
-                w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] transition-all duration-300
                 ${activeTab === item.id 
-                  ? 'bg-gradient-to-r from-emerald-900/80 to-slate-800/80 border border-emerald-500/30 text-emerald-100 shadow-lg shadow-emerald-900/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                  ? 'bg-white/10 border border-white/10 text-white shadow-2xl' 
+                  : 'text-slate-500 hover:text-white hover:bg-white/5'}
               `}
             >
-              <item.icon size={20} className={activeTab === item.id ? 'text-gold-400' : ''} />
-              <span className="font-medium">{item.label}</span>
+              <item.icon size={22} className={activeTab === item.id ? 'text-gold-400' : ''} />
+              <span className="font-bold text-sm tracking-wide">{item.label}</span>
             </button>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-8 border-t border-white/10">
           <button 
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+            className="w-full flex items-center gap-4 px-5 py-4 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-[1.5rem] transition-colors"
           >
-            <LogOut size={20} />
-            <span>Sign Out</span>
+            <LogOut size={22} />
+            <span className="font-bold text-sm">Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth p-4 md:p-8">
-        {/* Background Gradients */}
-        <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10">
-          <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-          <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-gold-600/10 rounded-full blur-3xl opacity-30"></div>
-        </div>
-        
-        <div className="max-w-5xl mx-auto pb-24 md:pb-20">
+      <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth p-6 md:p-12">
+        <div className="max-w-6xl mx-auto pb-24 md:pb-20">
           {children}
         </div>
       </main>

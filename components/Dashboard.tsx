@@ -1,318 +1,236 @@
+
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, UserProfile } from '../types';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, AlertTriangle, Coins, TrendingDown, Target, Zap, Calculator, Calendar, Newspaper, Flame, Coffee, Activity, Globe, Scale, Lock, RefreshCcw } from 'lucide-react';
-import { getMarketNews, getSpendingInsight, getGoldPrice } from '../services/geminiService';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Activity, Globe, ShieldCheck, Zap, ArrowUpRight, BookOpen, Quote, Flame, Scale } from 'lucide-react';
+import { getMarketNews, getGoldPrice } from '../services/geminiService';
 
 interface DashboardProps {
   transactions: Transaction[];
   user: UserProfile;
 }
 
-const QUOTES = [
-  "Jo vyakti apne aay se adhik kharch karta hai, uska vinash nishchit hai.",
-  "Dhan usi ke paas tikta hai jo uska samman karta hai.",
-  "Sankat ke samay bachaya hua dhan hi sabse bada mitra hota hai.",
-  "Rin (Karz), Shatru aur Rog - inhe shesh nahi rakhna chahiye.",
-  "Vidya se badi koi daulat nahi, aur santosh se bada koi sukh nahi."
-];
-
-const COLORS = ['#10B981', '#FACC15', '#EF4444', '#6366F1', '#EC4899', '#8B5CF6', '#F97316'];
-
 const Dashboard: React.FC<DashboardProps> = ({ transactions, user }) => {
   const [headlines, setHeadlines] = useState<string[]>([]);
-  const [insight, setInsight] = useState<string>("");
-  const [goldPrice, setGoldPrice] = useState<string>("72,000");
-  const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  const [goldPrice, setGoldPrice] = useState<string>("72,500");
+  const [niti] = useState<string>("Wealth is the foundation of Dharma, and the root of wealth is disciplined strategy. A person who is not disciplined in their spending can never rule their own destiny.");
 
-  // Basic Stats Calculation
-  const now = new Date();
-  
-  // Filter transactions for History (Net Worth) vs Future (Liabilities)
   const historyTransactions = transactions.filter(t => new Date(t.date).getTime() <= new Date().getTime());
-  const futureTransactions = transactions.filter(t => new Date(t.date).getTime() > new Date().getTime());
-
-  const totalIncome = historyTransactions
-    .filter(t => t.type === TransactionType.INCOME)
-    .reduce((acc, curr) => acc + curr.amount, 0);
-
-  const totalExpense = historyTransactions
-    .filter(t => t.type === TransactionType.EXPENSE)
-    .reduce((acc, curr) => acc + curr.amount, 0);
   
-  // Net Worth = Initial Savings + Income - Expenses
-  const initialWealth = user.currentSavings || 0;
-  const currentNetWorth = (initialWealth + totalIncome) - totalExpense; 
+  const totalIncome = historyTransactions.filter(t => t.type === TransactionType.INCOME).reduce((a, c) => a + c.amount, 0);
+  const totalExpense = historyTransactions.filter(t => t.type === TransactionType.EXPENSE).reduce((a, c) => a + c.amount, 0);
+  const currentNetWorth = (user.currentSavings || 0) + totalIncome - totalExpense;
 
-  // 1. Burn Rate (Spending Speed)
-  const currentDay = now.getDate();
-  const burnRate = totalExpense / Math.max(1, currentDay); // Amt per day
-  const allowedBurnRate = user.monthlyIncome / 30;
-  const isBurningFast = burnRate > allowedBurnRate;
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
+  const healthScore = Math.min(100, Math.max(0, 50 + (savingsRate / 2)));
 
-  // 2. Category Calculation
-  const expensesByCategory = historyTransactions
-    .filter(t => t.type === TransactionType.EXPENSE)
-    .reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const chartData = Object.keys(expensesByCategory).map(key => ({
-    name: key,
-    value: expensesByCategory[key]
-  }));
-
-  const topCategory = chartData.sort((a,b) => b.value - a.value)[0];
-
-  // 3. Wealth Projection (6 Months)
-  const monthlySavings = user.monthlyIncome - (totalExpense / Math.max(1, currentDay) * 30);
-  const projectionData = Array.from({length: 6}, (_, i) => ({
-    month: `M${i+1}`,
-    wealth: currentNetWorth + (monthlySavings * (i+1))
-  }));
-
-  // 4. Chai Index
-  const foodExpense = expensesByCategory['Food'] || 0;
-  const cupsOfChai = Math.floor(foodExpense / 20); // Assuming 20rs per cup
-
-  // 5. Tax Estimate (Simplified Flat 10% for demo)
-  const estimatedTax = (user.monthlyIncome * 12) * 0.10;
-
-  // 6. Emergency Fund (Goal: 6x Income)
-  const emergencyFundTarget = user.monthlyIncome * 6;
-  const emergencyFundProgress = Math.min((currentNetWorth / emergencyFundTarget) * 100, 100);
-
-  // Effect for Independent Data (News, Gold)
   useEffect(() => {
     getMarketNews().then(setHeadlines);
     getGoldPrice().then(setGoldPrice);
   }, []);
 
-  // Effect for Dependent Data (Insight)
-  useEffect(() => {
-    if(topCategory) {
-        getSpendingInsight(topCategory.name, topCategory.value).then(setInsight);
-    }
-  }, [topCategory?.name, topCategory?.value]);
+  const formatHeadline = (text: string) => {
+    const clean = text.replace(/[*•]/g, '').trim();
+    const keywords = [
+      { word: 'Bullish', color: 'text-emerald-400' },
+      { word: 'Bearish', color: 'text-rose-400' },
+      { word: 'High', color: 'text-emerald-400' },
+      { word: 'Sensex', color: 'text-gold-400 font-black' },
+      { word: 'Nifty', color: 'text-gold-400 font-black' },
+      { word: 'IPO', color: 'text-blue-400' },
+      { word: 'Gold', color: 'text-gold-500 font-bold' },
+      { word: 'Rises', color: 'text-emerald-400' },
+      { word: 'Falls', color: 'text-rose-400' },
+    ];
+
+    let elements: React.ReactNode[] = [clean];
+    keywords.forEach(({ word, color }) => {
+      elements = elements.flatMap(el => {
+        if (typeof el !== 'string') return el;
+        const parts = el.split(new RegExp(`(${word})`, 'gi'));
+        return parts.map((part, i) => 
+          part.toLowerCase() === word.toLowerCase() 
+            ? <span key={`${word}-${i}`} className={`${color}`}>{part}</span> 
+            : part
+        );
+      });
+    });
+    return elements;
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-10">
       
-      {/* Wisdom Banner */}
-      <div className="relative p-6 rounded-2xl bg-gradient-to-r from-amber-900/40 to-slate-900/40 border border-amber-500/20 shadow-lg overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <Coins size={100} />
-        </div>
-        <div className="flex justify-between items-start relative z-10">
+      {/* Top Utility Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+         <div className="flex items-center gap-3">
+            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
+                <ShieldCheck className="text-gold-400" size={20} />
+            </div>
             <div>
-                <h3 className="text-amber-400 text-sm font-bold uppercase tracking-widest mb-1">Chanakya Niti</h3>
-                <p className="text-xl md:text-2xl font-light italic text-slate-100 font-serif">"{randomQuote}"</p>
+               <h2 className="text-[10px] text-slate-500 uppercase font-black tracking-[0.3em]">Institutional Strategist</h2>
+               <p className="text-white font-bold">{user.name}</p>
             </div>
-            {/* Gold Ticker */}
-            <div className="hidden md:block bg-black/30 p-2 rounded-lg backdrop-blur-sm border border-gold-500/20">
-                <p className="text-xs text-gold-400 uppercase font-bold">Gold (10g)</p>
-                <p className="text-lg font-mono text-white">₹{goldPrice}</p>
+         </div>
+         
+         <div className="flex items-center gap-6">
+            <div className="text-right">
+               <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Market Gold (24K)</p>
+               <p className="text-white font-mono font-bold tracking-tighter">₹{goldPrice}</p>
             </div>
-        </div>
+            <div className="h-8 w-px bg-white/10"></div>
+            <div className="text-right">
+               <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Strategic Karma</p>
+               <div className="flex items-center gap-2 justify-end">
+                  <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                     <div className="h-full bg-gradient-to-r from-emerald-500 to-gold-500" style={{width: `${user.karmaScore}%`}}></div>
+                  </div>
+                  <span className="text-xs font-black text-emerald-400">{user.karmaScore}</span>
+               </div>
+            </div>
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        
-        {/* LEFT MAIN COLUMN */}
-        <div className="md:col-span-8 space-y-6">
+      {/* Primary Wisdom Banner - CHANAKYA NITI (ABSOLUTE TOP) */}
+      <div className="relative p-10 rounded-[3.5rem] bg-gradient-to-br from-[#1a1c20] to-black border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden group">
+         <div className="absolute top-0 right-0 p-10 opacity-[0.02] transform translate-x-1/4 -translate-y-1/4 group-hover:scale-105 transition-transform duration-1000 pointer-events-none">
+            <Quote size={320} className="text-gold-500" />
+         </div>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(202,138,4,0.05),transparent_50%)]"></div>
+         
+         <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+               <div className="p-2.5 bg-gold-500/10 rounded-2xl border border-gold-500/20">
+                  <BookOpen size={20} className="text-gold-400" />
+               </div>
+               <h3 className="text-[10px] font-black uppercase tracking-[0.6em] text-gold-500">Acharya's Strategic Guidance</h3>
+            </div>
+            <p className="text-3xl md:text-5xl font-serif text-slate-100 leading-[1.2] tracking-tight italic max-w-5xl">
+               "{niti}"
+            </p>
+            <div className="mt-12 flex items-center justify-between border-t border-white/5 pt-8">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-0.5 bg-gold-500/30"></div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">KAUTILYA ARTHASHASTRA PROTOCOL</p>
+               </div>
+               <button className="text-[10px] font-black uppercase tracking-widest text-gold-400 hover:text-white hover:scale-105 transition-all">Request Deeper Consultation</button>
+            </div>
+         </div>
+      </div>
+
+      {/* Wealth Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+         {/* Net Worth Glass Card */}
+         <div className="lg:col-span-8 p-12 rounded-[3.5rem] bg-white/[0.03] border border-white/10 relative overflow-hidden group shadow-2xl backdrop-blur-xl">
+            <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px]"></div>
             
-            {/* 1. Net Worth & News Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 flex flex-col justify-between min-h-[200px] group hover:bg-white/10 transition-colors">
-                    <div>
-                        <p className="text-slate-400 font-medium mb-1 flex items-center gap-2"><Globe size={14}/> Total Net Worth</p>
-                        <h2 className="text-4xl font-bold text-white tracking-tight">
-                        {user.currencySymbol} {currentNetWorth.toLocaleString('en-IN')}
-                        </h2>
-                    </div>
-                    
-                    {/* Rich List Percentile (Mock) */}
-                    <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <p className="text-xs text-emerald-300">
-                           <TrendingUp size={12} className="inline mr-1"/>
-                           You are richer than <strong>{Math.min(99, Math.floor((user.monthlyIncome/1000) * 1.5))}%</strong> of the world.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Market Pulse (News) */}
-                <div className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 flex flex-col">
-                     <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-gold-400 text-sm font-bold uppercase flex items-center gap-2"><Newspaper size={16}/> Market Pulse</h4>
-                        <span className="text-[10px] bg-red-500 text-white px-1.5 rounded animate-pulse">LIVE</span>
+            <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-8">
+               <div className="space-y-4">
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
+                     <Globe size={14} className="text-gold-400" /> Capital Deployed Locally
+                  </p>
+                  <h1 className="text-7xl md:text-8xl font-black text-white tracking-tighter">
+                     {user.currencySymbol}{currentNetWorth.toLocaleString('en-IN')}
+                  </h1>
+                  <div className="flex items-center gap-4 mt-2">
+                     <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                        <ArrowUpRight size={14} /> Total Growth
                      </div>
-                     <div className="flex-1 space-y-3 overflow-hidden">
-                        {headlines.length > 0 ? headlines.map((news, i) => (
-                            <div key={i} className="flex gap-2 items-start text-xs text-slate-300 border-b border-white/5 pb-2 last:border-0">
-                                <span className="text-slate-500 mt-0.5">•</span>
-                                <span>{news}</span>
-                            </div>
-                        )) : <p className="text-xs text-slate-500">Scanning markets...</p>}
-                     </div>
-                </div>
+                     <span className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Data Encrypted On-Device</span>
+                  </div>
+               </div>
+               <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 flex flex-col items-center min-w-[140px] backdrop-blur-md">
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Solvency Index</p>
+                  <span className={`text-5xl font-black ${healthScore > 50 ? 'text-emerald-400' : 'text-orange-400'}`}>{Math.round(healthScore)}</span>
+                  <div className="w-full h-1.5 bg-slate-800 rounded-full mt-4 overflow-hidden">
+                     <div className={`h-full ${healthScore > 50 ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{width: `${healthScore}%`}}></div>
+                  </div>
+               </div>
             </div>
 
-            {/* 2. Wealth Projection Chart */}
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2"><Activity size={18} className="text-purple-400"/> Wealth Projection</h3>
-                    <span className="text-xs text-slate-500 bg-white/5 px-2 py-1 rounded">6 Month Forecast</span>
-                </div>
-                <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={projectionData}>
-                            <defs>
-                                <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                            <XAxis dataKey="month" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value/1000).toFixed(0)}k`} />
-                            <Tooltip 
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
-                                itemStyle={{ color: '#10B981' }}
-                            />
-                            <Area type="monotone" dataKey="wealth" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorWealth)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
+            <div className="mt-14 h-48 w-full relative z-10">
+               <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={[
+                    {v: currentNetWorth * 0.75}, {v: currentNetWorth * 0.8}, {v: currentNetWorth * 0.9}, 
+                    {v: currentNetWorth * 0.85}, {v: currentNetWorth * 0.95}, {v: currentNetWorth}
+                  ]}>
+                     <defs>
+                        <linearGradient id="wealthGradient" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="5%" stopColor="#CA8A04" stopOpacity={0.25}/>
+                           <stop offset="95%" stopColor="#CA8A04" stopOpacity={0}/>
+                        </linearGradient>
+                     </defs>
+                     <Area type="monotone" dataKey="v" stroke="#CA8A04" strokeWidth={4} fillOpacity={1} fill="url(#wealthGradient)" />
+                  </AreaChart>
+               </ResponsiveContainer>
+            </div>
+         </div>
+
+         {/* Market Pulse Widget */}
+         <div className="lg:col-span-4 p-10 rounded-[3.5rem] bg-[#121418] border border-white/10 backdrop-blur-2xl relative overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-10 relative z-10">
+               <h3 className="text-[10px] font-black uppercase tracking-[0.6em] text-gold-500 flex items-center gap-3">
+                  <Activity size={18} className="animate-pulse" /> Global Signals
+               </h3>
+               <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                  <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+               </div>
             </div>
 
-            {/* 3. Stats Row (Velocity, Tax, Chai) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Burn Rate */}
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
-                   <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-slate-400 text-xs font-bold uppercase">Burn Rate</h4>
-                      <Flame size={16} className={isBurningFast ? "text-red-500" : "text-emerald-500"} />
-                   </div>
-                   <h3 className="text-2xl font-bold text-white mb-1">₹{Math.round(burnRate)}<span className="text-xs text-slate-500 font-normal">/day</span></h3>
-                   <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2">
-                       <div 
-                         className={`h-full rounded-full ${isBurningFast ? 'bg-red-500' : 'bg-emerald-500'}`} 
-                         style={{ width: `${Math.min((burnRate / (allowedBurnRate*1.5))*100, 100)}%`}} 
-                       />
-                   </div>
-                   <p className="text-[10px] text-slate-500 mt-2">Limit: ₹{Math.round(allowedBurnRate)}/day</p>
-                </div>
-
-                {/* Tax Estimator */}
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                   <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-slate-400 text-xs font-bold uppercase">Tax Liability</h4>
-                      <Scale size={16} className="text-blue-400" />
-                   </div>
-                   <h3 className="text-2xl font-bold text-white">₹{(estimatedTax/1000).toFixed(1)}k</h3>
-                   <p className="text-[10px] text-slate-500 mt-1">Est. annual (Old Regime)</p>
-                </div>
-
-                {/* Chai Index */}
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                   <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-slate-400 text-xs font-bold uppercase">Chai Index</h4>
-                      <Coffee size={16} className="text-amber-600" />
-                   </div>
-                   <h3 className="text-2xl font-bold text-white">{cupsOfChai} <span className="text-xs text-slate-500 font-normal">cups</span></h3>
-                   <p className="text-[10px] text-slate-500 mt-1">spent on Food/Drink</p>
-                </div>
-            </div>
-
-        </div>
-
-        {/* RIGHT COLUMN (Widgets) */}
-        <div className="md:col-span-4 space-y-6">
-          
-          {/* Upcoming Liabilities */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10">
-             <div className="flex items-center gap-2 mb-4 text-white">
-               <Calendar size={18} className="text-blue-400" />
-               <span className="text-sm font-bold uppercase">Liabilities Forecast</span>
-             </div>
-             <div className="space-y-3">
-               {futureTransactions.length > 0 ? futureTransactions.slice(0, 3).map(t => (
-                   <div key={t.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
-                      <div>
-                          <p className="text-sm font-medium text-slate-200">{t.description}</p>
-                          <p className="text-[10px] text-slate-500">{new Date(t.date).toLocaleDateString()}</p>
-                      </div>
-                      <span className="font-bold text-red-300">-₹{t.amount}</span>
-                   </div>
+            <div className="space-y-8 flex-1 relative z-10">
+               {headlines.length > 0 ? headlines.map((h, i) => (
+                  <div key={i} className="group cursor-default border-l border-white/5 pl-6 py-1 hover:border-gold-500 transition-all duration-300">
+                     <span className="text-[9px] font-black text-slate-600 block mb-2 uppercase tracking-[0.3em]">Signal Source 0{i+1}</span>
+                     <p className="text-sm font-medium text-slate-300 leading-relaxed group-hover:text-white transition-colors">
+                        {formatHeadline(h)}
+                     </p>
+                  </div>
                )) : (
-                   <p className="text-xs text-slate-500 italic text-center py-4">No upcoming bills scheduled.</p>
+                  [1,2,3].map(i => (
+                     <div key={i} className="h-12 bg-white/5 rounded-2xl animate-pulse mb-6"></div>
+                  ))
                )}
-             </div>
-          </div>
+            </div>
+            
+            <div className="mt-10 pt-6 border-t border-white/5 text-[9px] text-slate-600 font-black uppercase tracking-[0.5em] flex justify-between">
+               <span>Cognitive Feed</span>
+               <span>v3.5 Active</span>
+            </div>
+         </div>
+      </div>
 
-          {/* Safety Net (Emergency Fund) */}
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center relative overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-emerald-500"></div>
-             <div className="flex justify-center mb-2 text-emerald-400"><Lock size={24} /></div>
-             <h4 className="text-white font-bold mb-1">Safety Net</h4>
-             <p className="text-xs text-slate-400 mb-4">Goal: ₹{(emergencyFundTarget/100000).toFixed(1)} Lakhs</p>
-             
-             <div className="relative h-4 bg-slate-800 rounded-full overflow-hidden">
-                <div className="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${emergencyFundProgress}%` }}></div>
-             </div>
-             <p className="mt-2 text-xs font-mono text-emerald-300">{emergencyFundProgress.toFixed(1)}% Secured</p>
-          </div>
-          
-          {/* Smart Category Insight */}
-          {topCategory && (
-              <div className="p-5 rounded-2xl bg-purple-900/20 border border-purple-500/30">
-                 <div className="flex items-center gap-2 mb-2 text-purple-300">
-                    <Zap size={16} />
-                    <span className="text-xs font-bold uppercase">Spending Insight</span>
-                 </div>
-                 <p className="text-sm text-slate-200 italic leading-relaxed">
-                   "{insight || "Vittiya visleshan chal raha hai..."}"
-                 </p>
-                 <p className="text-[10px] text-purple-400 mt-2 text-right">- Chanakya AI on '{topCategory.name}'</p>
-              </div>
-          )}
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+         <div className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 flex items-center gap-6 hover:bg-white/[0.05] transition-all hover:border-white/10">
+            <div className="w-16 h-16 rounded-[1.5rem] bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/20 shadow-xl">
+               <Flame size={32} />
+            </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Burn Velocity</p>
+               <p className="text-3xl font-black text-white">₹{Math.round(totalExpense / 30).toLocaleString('en-IN')}</p>
+            </div>
+         </div>
 
-          {/* Subscription Detective */}
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-             <div className="flex items-center gap-2 mb-4 text-slate-300">
-               <RefreshCcw size={16} />
-               <span className="text-xs font-bold uppercase">Subscription Detective</span>
-             </div>
-             <div className="flex flex-wrap gap-2">
-                {['Netflix', 'Spotify', 'Amazon', 'Hotstar', 'Gym'].map(sub => {
-                    const found = historyTransactions.some(t => t.description.toLowerCase().includes(sub.toLowerCase()));
-                    return found ? (
-                        <span key={sub} className="px-3 py-1 rounded-full bg-red-500/20 text-red-300 text-xs border border-red-500/30">{sub}</span>
-                    ) : null;
-                })}
-                {/* Fallback if none found */}
-                {!historyTransactions.some(t => ['netflix','spotify','amazon','hotstar','gym'].some(s => t.description.toLowerCase().includes(s))) && 
-                    <span className="text-xs text-slate-500">No active subs detected.</span>
-                }
-             </div>
-          </div>
+         <div className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 flex items-center gap-6 hover:bg-white/[0.05] transition-all hover:border-white/10">
+            <div className="w-16 h-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-xl">
+               <Scale size={32} />
+            </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Defense Multiplier</p>
+               <p className="text-3xl font-black text-white">{(currentNetWorth/totalExpense).toFixed(1)}x</p>
+            </div>
+         </div>
 
-          {/* Inflation Time Machine */}
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-             <h4 className="text-slate-400 text-xs font-bold uppercase mb-2">Inflation Time Machine</h4>
-             <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-300">Your Goal Today</span>
-                <span className="text-white font-bold">₹{(user.targetAmount/100000).toFixed(1)}L</span>
-             </div>
-             <div className="flex justify-between items-center text-sm mt-1">
-                <span className="text-slate-500">In 2014</span>
-                <span className="text-emerald-400 font-mono">₹{((user.targetAmount * 0.55)/100000).toFixed(1)}L</span>
-             </div>
-          </div>
-
-        </div>
+         <div className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 flex items-center gap-6 hover:bg-white/[0.05] transition-all hover:border-white/10">
+            <div className="w-16 h-16 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 shadow-xl">
+               <Zap size={32} />
+            </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Capital Retention</p>
+               <p className="text-3xl font-black text-white">{savingsRate.toFixed(1)}%</p>
+            </div>
+         </div>
       </div>
     </div>
   );

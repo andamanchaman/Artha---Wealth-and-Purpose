@@ -1,8 +1,9 @@
+
 export enum TransactionType {
   EXPENSE = 'EXPENSE',
   INCOME = 'INCOME',
-  LENT = 'LENT', // Udhaar given
-  BORROWED = 'BORROWED' // Udhaar taken
+  LENT = 'LENT', 
+  BORROWED = 'BORROWED' 
 }
 
 export interface Transaction {
@@ -11,30 +12,31 @@ export interface Transaction {
   type: TransactionType;
   category: string;
   description: string;
-  date: string; // ISO string
-  relatedPerson?: string; // For Udhaar
-  isSettled?: boolean; // For Udhaar
+  date: string; 
+  relatedPerson?: string; 
+  isSettled?: boolean; 
 }
 
 export interface UserProfile {
-  id: string; // Unique ID for auth
+  id: string;
   name: string;
-  email?: string;
-  password?: string; // In real app, hash this. Here simulated.
+  email: string;
+  password?: string;
   monthlyIncome: number; 
   financialGoal: string;
-  targetAmount: number; // For Goal Tracker
-  currentSavings: number; // Manually updated or calculated
+  targetAmount: number; 
+  currentSavings: number; 
   currencySymbol: string;
   savingsLevel: 'Novice' | 'Saver' | 'Investor' | 'Arthashastra Master';
-  karmaScore: number; // 0-100 Financial Health Score
-  bioAuthEnabled: boolean; // Face ID preference
+  karmaScore: number; 
+  bioAuthEnabled: boolean;
+  biometricCredentialId?: string; // For WebAuthn Passkeys
 }
 
 export interface AppState {
   user: UserProfile | null;
   transactions: Transaction[];
-  registeredUsers: UserProfile[]; // Simulating a DB of users
+  registeredUsers: UserProfile[]; 
 }
 
 export interface BillAnalysis {
@@ -46,12 +48,12 @@ export interface BillAnalysis {
 }
 
 export interface PurchaseImpact {
-  healthScore: number; // 0-100 (100 is healthy)
-  socialScore: number; // 0-100 (100 is good for relationships)
-  utilityScore: number; // 0-100 (Practicality)
-  sustainabilityScore: number; // 0-100 (Eco-friendly)
+  healthScore: number; 
+  socialScore: number; 
+  utilityScore: number; 
+  sustainabilityScore: number; 
   verdict: string;
-  alternativeSuggestion: string; // "Instead of this, buy..."
+  alternativeSuggestion: string; 
 }
 
 export interface GeminiChatMessage {
