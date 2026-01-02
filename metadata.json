@@ -1,0 +1,8 @@
+{
+  "name": "Artha - Wealth & Purpose",
+  "description": "A high-end personal finance manager inspired by Chanakya Niti, featuring Gemini-powered bill analysis, financial advisory, and purchase simulation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
