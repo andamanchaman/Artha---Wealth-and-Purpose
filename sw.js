@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'artha-v2-cache';
 const ASSETS_TO_CACHE = [
   '/',
