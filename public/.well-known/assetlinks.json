@@ -1,14 +1,8 @@
-[
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.artha.app",
-      "sha256_cert_fingerprints": [
-        "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
-      ]
-    }
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.sata.artha.wealth",
+    "sha256_cert_fingerprints": ["BB:22:A5:86:E9:B3:84:21:DE:CC:BC:98:99:07:70:53:A1:12:11:A9:D8:1D:30:8B:3D:EB:D1:56:54:AA:1C:FC"]
   }
-]
+}]
