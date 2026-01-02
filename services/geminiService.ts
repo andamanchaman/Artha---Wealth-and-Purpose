@@ -1,93 +1,53 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { BillAnalysis, PurchaseImpact } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize with a check for the API key to avoid crashing on boot
+const genAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("API_KEY is missing. AI features will be disabled.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const PERSONA_PROMPTS: Record<string, string> = {
   'Chanakya': `You are Acharya Chanakya. Speak in a mix of Hindi and English (Hinglish). Use words like 'Vats', 'Dhan', 'Arth', 'Niti'. 
-  
   STYLE GUIDE:
   - Be strategic, ruthless about waste, and wise.
-  - Use metaphors from the Arthashastra.
-  - Example: "Vats, dhan ka sanchay hi aapatkaal ka mitra hai."
-  - **Always highlight key financial terms in bold.**
-  - Use bullet points for steps.`,
-
-  'Krishna': `You are Lord Krishna. Speak calmly and philosophically. Use 'Parth' to address the user. 
-  
-  STYLE GUIDE:
-  - Focus on 'Karma' (Duty/Investing) and detachment from anxiety (Market ups/downs).
-  - Speak in soothing Hinglish.
-  - Guide them to do their duty without fear.
-  - **Bold** important concepts like **Compounding** or **Patience**.`,
-
-  'Vivekananda': `You are Swami Vivekananda. Speak with great energy and inspiration. 
-  
-  STYLE GUIDE:
-  - Focus on strength, character, and fearlessness.
-  - "Arise, awake!" vibe.
-  - Tell them money is a tool for service (Seva) and strength.
-  - Use concise, punchy sentences.`,
-
-  'Gandhi': `You are Mahatma Gandhi. Speak about simplicity, truth (Satya), and needs vs greed. 
-  
-  STYLE GUIDE:
-  - Be very frugal and ethical.
-  - Speak in soft, polite Hinglish.
-  - Advise against debt and unnecessary luxury.`,
-
-  'Einstein': `You are Albert Einstein. Speak with curiosity and use physics/math metaphors.
-  
-  STYLE GUIDE:
-  - Call Compound interest the 8th wonder.
-  - Speak primarily in English.
-  - Be a bit eccentric but mathematically sound.
-  - Explain complex concepts simply.`,
-
-  'Shri Ram': `You are Maryada Purushottam Shri Ram. Speak with absolute righteousness (Dharma). 
-  
-  STYLE GUIDE:
-  - Focus on duty towards family, stability, and ethical earning.
-  - Use formal, respectful Hinglish.
-  - Be calm and composed.`
+  - Metaphors from Arthashastra.
+  - Highlight key terms in bold.`,
+  'Krishna': `You are Lord Krishna. Speak calmly. Use 'Parth' to address the user. Focus on Karma and detachment from market anxiety.`,
+  'Vivekananda': `You are Swami Vivekananda. Energy, inspiration, character, and strength.`,
+  'Gandhi': `You are Mahatma Gandhi. Simplicity, truth, needs vs greed.`,
+  'Einstein': `You are Albert Einstein. Compound interest is the 8th wonder. Math metaphors.`,
+  'Shri Ram': `You are Maryada Purushottam Shri Ram. Dharma, duty, righteousness.`
 };
 
-// 1. Chatbot with Search Grounding & Persona
 export const getFinancialAdvice = async (
   query: string,
   history: { role: 'user' | 'model'; text: string }[],
   persona: string = 'Chanakya'
 ): Promise<string> => {
   try {
-    const model = 'gemini-3-pro-preview';
-    const personaInstruction = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS['Chanakya'];
-    
+    const ai = genAI();
+    if (!ai) return "API Key not configured.";
+
     const systemInstruction = `
-      ${personaInstruction}
-      
-      CORE RULES:
-      1. Keep advice practical and locally relevant to India.
-      2. Use clear formatting:
-         - Use **bold** for emphasis.
-         - Use lists (•) for multiple points.
-         - Keep paragraphs short.
-      3. If the user asks about current market trends, use the Google Search tool.
+      ${PERSONA_PROMPTS[persona] || PERSONA_PROMPTS['Chanakya']}
+      1. Keep advice practical for India.
+      2. Use bold for emphasis.
+      3. Use Google Search for trends.
     `;
 
-    // Construct valid Content[] for the API
     const contents = history.map(msg => ({
         role: msg.role,
         parts: [{ text: msg.text }]
     }));
-    
-    // Add current query
-    contents.push({
-        role: 'user',
-        parts: [{ text: query }]
-    });
+    contents.push({ role: 'user', parts: [{ text: query }] });
 
     const response = await ai.models.generateContent({
-      model: model,
+      model: 'gemini-3-pro-preview',
       contents: contents,
       config: {
         tools: [{ googleSearch: {} }],
@@ -95,22 +55,19 @@ export const getFinancialAdvice = async (
       }
     });
 
-    return response.text || "Mera dhyan bhang ho gaya hai. Punah prayas karein.";
+    return response.text || "Mera dhyan bhang ho gaya hai.";
   } catch (error) {
     console.error("Gemini Chat Error:", error);
-    return "Sanchaar mein badha aa gayi hai. Internet ki jaanch karein.";
+    return "Sanchaar mein badha aa gayi hai.";
   }
 };
 
-// 2. Image Analysis
 export const analyzeBillImage = async (base64Image: string, mimeType: string): Promise<BillAnalysis | null> => {
   try {
-    const prompt = `
-      Analyze this image of a receipt/bill. 
-      Extract the Merchant Name, Total Amount, Date, and line items.
-      Categorize the expense into one of: 'Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Bills', 'Other'.
-      Return valid JSON.
-    `;
+    const ai = genAI();
+    if (!ai) return null;
+
+    const prompt = `Analyze this image of a receipt. Extract Merchant, Total, Date, and items. Categorize as Food/Transport/Shopping/Health/Entertainment/Bills/Other. Return JSON.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
@@ -145,56 +102,31 @@ export const analyzeBillImage = async (base64Image: string, mimeType: string): P
       }
     });
 
-    const text = response.text;
-    if (!text) return null;
-    return JSON.parse(text) as BillAnalysis;
-
+    return response.text ? JSON.parse(response.text) : null;
   } catch (error) {
-    console.error("Gemini Vision Error:", error);
     return null;
   }
 };
 
-// 3. Fun: Generate "Home Made" Bill
 export const generateCreativeBill = async (items: string): Promise<string> => {
   try {
-    const prompt = `
-      Create a humorous, fancy "Invoice" for homemade items: ${items}.
-      The "Merchant" should be "Maa Ka Pyaar Pvt Ltd" or "Home Sweet Home".
-      Add a "Love Tax", "Effort Surcharge", and "Discount for being cute".
-      Keep it short, fun, and formatted like a receipt text.
-      Use Indian context (Rupees).
-    `;
-    
+    const ai = genAI();
+    if (!ai) return "AI unavailable.";
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+      model: 'gemini-3-flash-preview',
+      contents: `Create a humorous, fancy "Invoice" for homemade items: ${items}. Merchant: "Maa Ka Pyaar". Indian context (Rupees).`,
     });
-    
-    return response.text || "Could not generate bill.";
-  } catch (error) {
-    console.error("Creative Bill Error", error);
-    return "Error generating bill.";
-  }
+    return response.text || "Could not generate.";
+  } catch (error) { return "Error generating bill."; }
 };
 
-// 4. Deep Purchase Impact Analysis
 export const analyzePurchaseImpact = async (item: string, price: number, currency: string): Promise<PurchaseImpact | null> => {
   try {
-    const prompt = `
-      Analyze the purchase of "${item}" costing ${currency}${price}.
-      Evaluate it on 4 metrics (0-100 scale):
-      1. Health Impact (Is it healthy physically/mentally?)
-      2. Social Impact (Does it improve relationships?)
-      3. Utility (Is it actually useful?)
-      4. Sustainability (Eco-friendly?)
-      
-      Also provide a Verdict (1 short sentence) and an Alternative Suggestion (What better thing to do with this money?).
-    `;
-
+    const ai = genAI();
+    if (!ai) return null;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+      model: 'gemini-3-flash-preview',
+      contents: `Analyze purchase of "${item}" costing ${currency}${price} on Health, Social, Utility, Sustainability (0-100). Provide Verdict and Alternative. JSON.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -211,87 +143,56 @@ export const analyzePurchaseImpact = async (item: string, price: number, currenc
         }
       }
     });
-
-    const text = response.text;
-    if (!text) return null;
-    return JSON.parse(text) as PurchaseImpact;
-
-  } catch (error) {
-    console.error("Impact Analysis Error:", error);
-    return null;
-  }
+    return response.text ? JSON.parse(response.text) : null;
+  } catch (error) { return null; }
 };
 
-// 5. Market News Headlines (Search Grounding)
 export const getMarketNews = async (): Promise<string[]> => {
   try {
-    // Note: responseMimeType: "application/json" CANNOT be used with googleSearch tools.
-    // We must request a structured text format and parse it.
+    const ai = genAI();
+    if (!ai) return ["News unavailable."];
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: "What are the top 3 most important short financial news headlines for India today? Return them as a list of 3 bullet points starting with '* '.",
-      config: {
-        tools: [{ googleSearch: {} }]
-      }
+      model: 'gemini-3-flash-preview',
+      contents: "Top 3 India financial headlines today. Bullet points.",
+      config: { tools: [{ googleSearch: {} }] }
     });
-    
-    const text = response.text || "";
-    // Manual Parsing of bullet points
-    const lines = text.split('\n')
-      .map(l => l.trim())
-      .filter(l => l.startsWith('*') || l.startsWith('-') || l.startsWith('•'))
-      .map(l => l.replace(/^[\*\-•]\s*/, '').trim())
-      .slice(0, 3);
-
-    if (lines.length > 0) return lines;
-    return ["Market data currently unavailable.", "Gold prices holding steady.", "Check your portfolio."];
-  } catch (error) {
-    console.error("Market News Error:", error);
-    return ["Unable to fetch live news.", "Check internet connection.", "Markets are closed."];
-  }
+    const lines = (response.text || "").split('\n').filter(l => l.includes('*') || l.includes('•')).slice(0, 3);
+    return lines.length > 0 ? lines : ["Markets are dynamic.", "Stay focused on goals.", "Diversification is key."];
+  } catch (error) { return ["Check connection for live news."]; }
 };
 
-// 6. Category Wisdom
 export const getSpendingInsight = async (category: string, amount: number): Promise<string> => {
   try {
+    const ai = genAI();
+    if (!ai) return "Be wise.";
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `User spent a lot (${amount}) on '${category}'. Give one witty, Chanakya-style one-liner advice in Hindi/Hinglish about this. 15 words max.`
+      model: 'gemini-3-flash-preview',
+      contents: `Spent ${amount} on '${category}'. Witty Chanakya one-liner advice. 15 words max.`
     });
-    return response.text || "Dhan ka vyay soch samajh kar karein.";
-  } catch (error) {
-    return "Kharch par niyantran rakhein.";
-  }
+    return response.text || "Be frugal.";
+  } catch (error) { return "Be wise."; }
 };
 
-// 7. Get Gold Price
 export const getGoldPrice = async (): Promise<string> => {
   try {
+    const ai = genAI();
+    if (!ai) return "72,000";
     const response = await ai.models.generateContent({
-       model: 'gemini-2.5-flash',
-       contents: "Current 10g Gold price in India in INR? Return just the number (e.g. 72000).",
+       model: 'gemini-3-flash-preview',
+       contents: "Current 10g Gold price in India INR? Number only.",
        config: { tools: [{ googleSearch: {} }] }
     });
-    const text = response.text || "72000";
-    // extract digits
-    const price = text.match(/[\d,]+/)?.[0] || "72,000";
-    return price;
-  } catch (e) {
-    return "72,000";
-  }
+    return response.text?.match(/[\d,]+/)?.[0] || "72,000";
+  } catch (e) { return "72,000"; }
 }
 
-// 8. YouTuber Income Estimator
 export const estimateYoutubeIncome = async (niche: string, views: number, uploadsPerMonth: number): Promise<{ low: number, high: number, explanation: string }> => {
   try {
-    const prompt = `
-       Estimate monthly Youtube Adsense revenue (in INR) for a channel in niche "${niche}" getting ${views} average views per video with ${uploadsPerMonth} uploads per month.
-       Consider Indian CPM/RPM rates (e.g. Finance is high, Vlog is low).
-       Return JSON with 'low' estimate, 'high' estimate, and a short 'explanation'.
-    `;
+    const ai = genAI();
+    if (!ai) throw new Error();
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
+        model: 'gemini-3-flash-preview',
+        contents: `Youtube Adsense estimate (INR) for niche "${niche}", ${views} views/video, ${uploadsPerMonth} uploads. JSON.`,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -305,29 +206,19 @@ export const estimateYoutubeIncome = async (niche: string, views: number, upload
             }
         }
     });
-    const text = response.text;
-    if(!text) throw new Error("No response");
-    return JSON.parse(text);
-  } catch (e) {
-    return { low: 0, high: 0, explanation: "Could not estimate. Try again." };
-  }
+    return response.text ? JSON.parse(response.text) : { low: 0, high: 0, explanation: "Error" };
+  } catch (e) { return { low: 0, high: 0, explanation: "Error" }; }
 };
 
-// 9. Mutual Fund Overlap Check
 export const checkFundOverlap = async (funds: string): Promise<string> => {
    try {
-     const prompt = `
-       The user holds these mutual funds: ${funds}.
-       Are there significant overlaps in their underlying stock portfolios? 
-       Identify duplicate exposures. Keep it short and strategic.
-     `;
+     const ai = genAI();
+     if (!ai) return "N/A";
      const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
-        contents: prompt,
+        contents: `Portfolio overlap for: ${funds}. Duplicate exposures?`,
         config: { tools: [{ googleSearch: {} }] }
      });
-     return response.text || "Could not analyze overlap.";
-   } catch(e) {
-     return "Analysis failed.";
-   }
+     return response.text || "N/A";
+   } catch(e) { return "N/A"; }
 };
