@@ -1,4 +1,4 @@
-const CACHE_NAME = 'artha-v2-cache';
+const CACHE_NAME = 'artha-v3-cache';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
